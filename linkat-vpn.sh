@@ -72,12 +72,12 @@ if [ -f "$VPN_CONF_FILE" ]; then
   . "$VPN_CONF_FILE"
 else
   NEW_NAME="servidor"
-  NEW_DOMAIN="intracentre"
+  intracentre="intracentre"
   NEW_DEV=""
   NEW_IP="192.168.0.240"
   NEW_VPN_PORT="24"
   NEW_VPN_PROTOCOL="192.168.0.1"
-  COMPRESSION_ENABLED="No"
+  COMPRESSION=""
   ENCRYPT=$(echo "$res" | awk -F"|" '{print $8}')
   NEW_DNS1="213.176.161.16"
   NEW_DNS2="213.176.161.18"
@@ -120,7 +120,7 @@ VPN_RANDOM_PORT="Aleatori:"$GEN_RANDOM_PORT""
 NEW_VPN_PORT=$(echo "$VPN_DEFAULT_PORT $VPN_CUSTOM_PORT $VPN_RANDOM_PORT")
 PROTOCOL="udp tcp"
 NEW_VPN_PROTOCOL="udp tcp"
-COMPRESSION_ENABLED="No Sí"
+COMPRESSION="No Sí"
 COMP_ALG="lz4-v2 lz4 lzo"
 
 
@@ -189,8 +189,8 @@ formulari()
 res=$(yad --width=400 --title="Linkat Servidor Openvpn" --text="\nAquest instal·lador configura el servidor VPN Linkat.\nIntroduïu els valors per configurar el sevidor de centre.\nPots deixar els valors per defecte.\nCal emplenar tots els camps.\n\nConfiguracions del servidor:\n" \
 --image="/usr/share/linkat/linkat-servidor/linkat-servidor-banner.png" \
 --form --item-separator=" " \
---field="Nom del servidor":RO \
---field="Nom del domini" \
+--field="m del servidor":RO \
+--field="m del domini" \
 --field="Targeta de xarxa":CBE \
 --field="IP pública del servidor VPN" \
 --field="Port Servidor VPN":CBE \
@@ -200,7 +200,7 @@ res=$(yad --width=400 --title="Linkat Servidor Openvpn" --text="\nAquest instal�
 --field="DNS Primària" \
 --field="DNS Secundària" \
 --button="D'acord" --button="Cancel·la":11 \
-"$NEW_NAME" "$NEW_DOMAIN" "$DEVS" "$NEW_IP" "$NEW_VPN_PORT" "$NEW_VPN_PROTOCOL" "$COMPRESSION_ENABLED" "$ENCRYPT" "$NEW_DNS1" "$NEW_DNS2")
+"$NEW_NAME" "$intracentre" "$DEVS" "$NEW_IP" "$NEW_VPN_PORT" "$NEW_VPN_PROTOCOL" "$COMPRESSION" "$ENCRYPT" "$NEW_DNS1" "$NEW_DNS2")
 res1="$?"
 
 if [ "$res1" -gt 1 ]; then
@@ -208,12 +208,12 @@ if [ "$res1" -gt 1 ]; then
 fi
 
 NEW_NAME=$(echo "$res" | awk -F"|" '{print $1}')
-NEW_DOMAIN=$(echo "$res" | awk -F"|" '{print $2}')
+intracentre=$(echo "$res" | awk -F"|" '{print $2}')
 NEW_DEV=$(echo "$res" | awk -F"|" '{print $3}')
 NEW_IP=$(echo "$res" | awk -F"|" '{print $4}')
 NEW_VPN_PORT=$(echo "$res" | awk -F"|" '{print $5}')
 NEW_VPN_PROTOCOL=$(echo "$res" | awk -F"|" '{print $6}')
-COMPRESSION_ENABLED=$(echo "$res" | awk -F"|" '{print $7}')
+COMPRESSION=$(echo "$res" | awk -F"|" '{print $7}')
 ENCRYPT=$(echo "$res" | awk -F"|" '{print $8}')
 NEW_DNS1=$(echo "$res" | awk -F"|" '{print $9}')
 NEW_DNS2=$(echo "$res" | awk -F"|" '{print $10}')
@@ -228,23 +228,10 @@ if [ ! "$?" -eq 0 ]; then
 fi
 }
 
-validar_formulari()
-{
-yad --width=400 --title="Linkat Servidor Openvpn" --text="\nLes dades següents són correctes?\n\nServidor: $NEW_NAME\nDomini: $NEW_DOMAIN\nDispositiu: $NEW_DEV\nIP: $NEW_IP\nPort: $NEW_VPN_PORT\nProtocol: $NEW_VPN_PROTOCOL\nCompressió habilitada: $COMPRESSION_ENABLED\nEncriptació: $ENCRYPT\nDNS Primària: $NEW_DNS1\nDNS Secundària: $NEW_DNS2" \
---image="/usr/share/linkat/linkat-servidor/linkat-servidor-banner.png" \
---button="D'acord" --button="Cancel·la":11
-res1="$?"
-
-if [ "$res1" -gt 1 ]; then
-        ERROR="1"
-fi
-}
-
 
 selectCompression() {
 
-COMP_ALG="lz4-v2 lz4 lz0"
-if [[ $COMPRESSION_ENABLED == "Sí" ]]; then
+if [[ $COMPRESSION == "Sí" ]]; then
 
 res=$(yad --width=400 --title="Compressió Servidor Openvpn" --text="\nSel·lecciona l'algoritme de compressió.\n\nConfiguracions del servidor:\n" \
 --image="/usr/share/linkat/linkat-servidor/linkat-servidor-banner.png" \
@@ -262,6 +249,35 @@ COMP_ALG=$(echo "$res" | awk -F"|" '{print $1}')
 
 fi
 }
+
+
+
+validar_formulari()
+{
+
+if [[ $COMPRESSION == "Sí" ]]; then
+
+COMPRESSION=$COMP_ALG
+yad --width=400 --title="Linkat Servidor Openvpn" --text="\nLes dades següents són correctes?\n\nServidor: $NEW_NAME\nDomini: $intracentre\nDispositiu: $NEW_DEV\nIP: $NEW_IP\nPort: $NEW_VPN_PORT\nProtocol: $NEW_VPN_PROTOCOL\nCompressió: $COMPRESSION\nEncriptació: $ENCRYPT\nDNS Primària: $NEW_DNS1\nDNS Secundària: $NEW_DNS2" \
+--image="/usr/share/linkat/linkat-servidor/linkat-servidor-banner.png" \
+--button="D'acord" --button="Cancel·la":11
+
+
+
+else
+
+yad --width=400 --title="Linkat Servidor Openvpn" --text="\nLes dades següents són correctes?\n\nServidor: $NEW_NAME\nDomini: $intracentre\nDispositiu: $NEW_DEV\nIP: $NEW_IP\nPort: $NEW_VPN_PORT\nProtocol: $NEW_VPN_PROTOCOL\nCompressió: $COMPRESSION\nEncriptació: $ENCRYPT\nDNS Primària: $NEW_DNS1\nDNS Secundària: $NEW_DNS2" \
+--image="/usr/share/linkat/linkat-servidor/linkat-servidor-banner.png" \
+--button="D'acord" --button="Cancel·la":11
+res1="$?"
+
+if [ "$res1" -gt 1 ]; then
+        ERROR="1"
+fi
+
+fi
+}
+
 
 
 
@@ -298,12 +314,12 @@ fi
 ## Genera nou fitxer de configuració linkat-servidor.conf
 echo "$DATE" > $VPN_CONF_FILE
 echo "NEW_NAME=$NEW_NAME" >> $VPN_CONF_FILE
-echo "NEW_DOMAIN=$NEW_DOMAIN" >> $VPN_CONF_FILE
+echo "intracentre=$intracentre" >> $VPN_CONF_FILE
 echo "NEW_DEV=$NEW_DEV" >> $VPN_CONF_FILE
 echo "NEW_IP=$NEW_IP" >> $VPN_CONF_FILE
 echo "NEW_VPN_PORT=$NEW_VPN_PORT" >> $VPN_CONF_FILE
 echo "NEW_VPN_PROTOCOL=$NEW_VPN_PROTOCOL" >> $VPN_CONF_FILE
-echo "COMPRESSION_ENABLED=$COMPRESSION_ENABLED" >> $VPN_CONF_FILE
+echo "COMPRESSION=$COMPRESSION" >> $VPN_CONF_FILE
 echo "ENCRYPT=$ENCRYPT" >> $VPN_CONF_FILE
 echo "NEW_DNS1=$NEW_DNS1" >> $VPN_CONF_FILE
 echo "NEW_DNS2=$NEW_DNS2" >> $VPN_CONF_FILE
@@ -324,12 +340,12 @@ IP4=$(echo "$NEW_IP" | cut -d "." -f 4 2>&1)
 cd "$FILES_LINKAT"/
 
 sed -i s/servidor/"$NEW_NAME"/g *
-sed -i s/NEW_DOMAIN/"$NEW_DOMAIN"/g *
+sed -i s/intracentre/"$intracentre"/g *
 sed -i s/enp0s31f6/"$NEW_DEV"/g *
 sed -i s/192.168.0.240/"$NEW_IP"/g *
 sed -i s/1194/"$NEW_VPN_PORT"/g *
 sed -i s/udp/"$NEW_VPN_PROTOCOL"/g *
-sed -i s/No/"$COMPRESSION_ENABLED"/g *
+sed -i s//"$COMPRESSION"/g *
 sed -i s/Estandar/"$ENCRYPT"/g *
 sed -i s/213.176.161.16/"$NEW_DNS1"/g *
 sed -i s/213.176.161.18/"$NEW_DNS2"/g *

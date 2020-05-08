@@ -321,7 +321,7 @@ function installQuestions() {
 			echo "Unbound is already installed."
 			echo "You can allow the script to configure it in order to use it from your OpenVPN clients"
 			echo "We will simply add a second server to /etc/unbound/unbound.conf for the OpenVPN subnet."
-			echo "No changes are made to the current configuration."
+			echo " changes are made to the current configuration."
 			echo ""
 
 			until [[ $CONTINUE =~ (y|n) ]]; do
@@ -372,7 +372,7 @@ function installQuestions() {
 	echo ""
 	echo "Do you want to customize encryption settings?"
 	echo "Unless you know what you're doing, you should stick with the default parameters provided by the script."
-	echo "Note that whatever you choose, all the choices presented in the script are safe. (Unlike OpenVPN's defaults)"
+	echo "te that whatever you choose, all the choices presented in the script are safe. (Unlike OpenVPN's defaults)"
 	echo "See https://github.com/angristan/openvpn-install#security-and-encryption to learn more."
 	echo ""
 	until [[ $CUSTOMIZE_ENC =~ (y|n) ]]; do

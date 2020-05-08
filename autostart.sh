@@ -22,7 +22,7 @@ Encoding=UTF-8
 Name=$NAME
 Comment=$COMMENT
 Exec=$COMMAND
-StartupNotify=true
+Startuptify=true
 Terminal=false
 EOF
     $((i++))
