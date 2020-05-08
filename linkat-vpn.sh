@@ -2,6 +2,7 @@
 
 ## Declarar variables
 VPN_CONF_FILE=/etc/linkat/linkat-vpn/linkat-vpn.conf
+VPN_ENCRYPT_SETTINGS=/etc/linkat/linkat-vpn/encryption-settings.conf
 PLANTILLES=/usr/share/linkat/linkat-vpn/plantilles
 FILES_LINKAT=/usr/share/linkat/linkat-vpn/configurador/files
 ANSIBLEPLAY=/usr/share/linkat/linkat-vpn/configurador
@@ -65,6 +66,8 @@ function initialCheck() {
         checkOS
 }
 
+## VPN Server Network Configuration
+
 if [ -f "$VPN_CONF_FILE" ]; then
   . "$VPN_CONF_FILE"
 else
@@ -74,13 +77,28 @@ else
   NEW_IP="192.168.0.240"
   NEW_VPN_PORT="24"
   NEW_VPN_PROTOCOL="192.168.0.1"
+  COMPRESSION_ENABLED="No"
+  ENCRYPT=$(echo "$res" | awk -F"|" '{print $8}')
   NEW_DNS1="213.176.161.16"
   NEW_DNS2="213.176.161.18"
-  NEW_PASSROOT1=""
-  NEW_PASSROOT2=""
-  NEW_PASSLNADMIN1=""
-  NEW_PASSLNADMIN2=""
 fi
+
+
+## VPN Server Encryption Configuration
+
+if [ -f "$VPN_ENCRYPT_SETTINGS" ]; then
+  . "$VPN_ENCRYPT_SETTINGS"
+else
+  CIPHER="AES-128-GCM"
+  CERT_TYPE="1" # ECDSA
+  CERT_CURVE="prime256v1"
+  CC_CIPHER="TLS-ECDHE-ECDSA-WITH-AES-128-GCM-SHA256"
+  DH_TYPE="1" # ECDH
+  DH_CURVE="prime256v1"
+  HMAC_ALG="SHA256"
+  TLS_SIG="1" # tls-crypt
+fi
+
 
 
 
@@ -100,14 +118,10 @@ VPN_CUSTOM_PORT="Personalitzat"
 GEN_RANDOM_PORT="$(shuf -i49152-65535 -n1)" 
 VPN_RANDOM_PORT="Aleatori:"$GEN_RANDOM_PORT""
 NEW_VPN_PORT=$(echo "$VPN_DEFAULT_PORT $VPN_CUSTOM_PORT $VPN_RANDOM_PORT")
-
-## PROTOCOLS VPN
 PROTOCOL="udp tcp"
 NEW_VPN_PROTOCOL="udp tcp"
-
-## COMPRESSION VPN
-COMPRESSION_ENABLED="Deshabilitada Habilitada"
-COMPRESSION_ALG="lz4-v2 lz4 lzo"
+COMPRESSION_ENABLED="No Sí"
+COMP_ALG="lz4-v2 lz4 lzo"
 
 
 ## ENCRYPTION SETTINGS ###################################################
@@ -175,7 +189,7 @@ formulari()
 res=$(yad --width=400 --title="Linkat Servidor Openvpn" --text="\nAquest instal·lador configura el servidor VPN Linkat.\nIntroduïu els valors per configurar el sevidor de centre.\nPots deixar els valors per defecte.\nCal emplenar tots els camps.\n\nConfiguracions del servidor:\n" \
 --image="/usr/share/linkat/linkat-servidor/linkat-servidor-banner.png" \
 --form --item-separator=" " \
---field="Nom del servidor" \
+--field="Nom del servidor":RO \
 --field="Nom del domini" \
 --field="Targeta de xarxa":CBE \
 --field="IP pública del servidor VPN" \
@@ -186,7 +200,7 @@ res=$(yad --width=400 --title="Linkat Servidor Openvpn" --text="\nAquest instal�
 --field="DNS Primària" \
 --field="DNS Secundària" \
 --button="D'acord" --button="Cancel·la":11 \
-"$NEW_NAME" "NEW_DOMAIN" "$DEVS" "$NEW_IP" "$NEW_VPN_PORT" "$NEW_VPN_PROTOCOL" "$COMPRESSION_ENABLED" "$ENCRYPT" "$NEW_DNS1" "$NEW_DNS2")
+"$NEW_NAME" "$NEW_DOMAIN" "$DEVS" "$NEW_IP" "$NEW_VPN_PORT" "$NEW_VPN_PROTOCOL" "$COMPRESSION_ENABLED" "$ENCRYPT" "$NEW_DNS1" "$NEW_DNS2")
 res1="$?"
 
 if [ "$res1" -gt 1 ]; then
@@ -226,6 +240,33 @@ if [ "$res1" -gt 1 ]; then
 fi
 }
 
+
+selectCompression() {
+
+COMP_ALG="lz4-v2 lz4 lz0"
+if [[ $COMPRESSION_ENABLED == "Sí" ]]; then
+
+res=$(yad --width=400 --title="Compressió Servidor Openvpn" --text="\nSel·lecciona l'algoritme de compressió.\n\nConfiguracions del servidor:\n" \
+--image="/usr/share/linkat/linkat-servidor/linkat-servidor-banner.png" \
+--form --item-separator=" " \
+--field="Algoritme de compressió":CBE \
+--button="D'acord" --button="Cancel·la":11 \
+"$COMP_ALG")
+res1="$?"
+
+if [ "$res1" -gt 1 ]; then
+        exit 1
+fi
+
+COMP_ALG=$(echo "$res" | awk -F"|" '{print $1}')
+
+fi
+}
+
+
+
+
+
 while [ "$ERROR" -eq 1 ]; do
         ERROR="0"
         formulari
@@ -233,6 +274,7 @@ while [ "$ERROR" -eq 1 ]; do
         #check_ip Passarel·la "$NEW_VPN_PROTOCOL"
         check_ip DNS "$NEW_DNS1"
   	check_ip DNS "$NEW_DNS2"
+        selectCompression
         #check_pass root "$NEW_PASSROOT1" "$NEW_PASSROOT2"
         #check_pass lnadmin "$NEW_PASSLNADMIN1" "$NEW_PASSLNADMIN2"
         if [ "$ERROR" -eq 0 ]; then
@@ -243,24 +285,28 @@ done
 
 
 ## Backup del fitxer de configuració linkat-servidor.conf
-if [ -f "$CONF_FILE" ]; then
-        cp -av "$CONF_FILE" "$CONF_FILE"."$DATE"
+if [ -f "$VPN_CONF_FILE" ]; then
+        cp -av "$VPN_CONF_FILE" "$VPN_CONF_FILE"."$DATE"
 fi
 
+## Backup del fitxer de configuració linkat-servidor.conf
+if [ -f "$VPN_ENCRYPTION_SETTINGS" ]; then
+        cp -av "$VPN_ENCRYPTION_SETTINGS" "$VPN_ENCRYPTION_SETTINGS"."$DATE"
+fi
+
+
 ## Genera nou fitxer de configuració linkat-servidor.conf
-echo "$DATE" > $CONF_FILE
-echo "NEW_NAME=$NEW_NAME" >> $CONF_FILE
-echo "NEW_DOMAIN=$NEW_DOMAIN" >> $CONF_FILE
-echo "NEW_DEV=$NEW_DEV" >> $CONF_FILE
-echo "NEW_IP=$NEW_IP" >> $CONF_FILE
-echo "NEW_VPN_PORT=$NEW_VPN_PORT" >> $CONF_FILE
-echo "NEW_VPN_PROTOCOL=$NEW_VPN_PROTOCOL" >> $CONF_FILE
-echo "NEW_DNS1=$NEW_DNS1" >> $CONF_FILE
-echo "NEW_DNS2=$NEW_DNS2" >> $CONF_FILE
-echo "NEW_PASSROOT=$NEW_PASSROOT1" >> $CONF_FILE
-echo "NEW_PASSLNADMIN=$NEW_PASSLNADMIN1" >> $CONF_FILE
-
-
+echo "$DATE" > $VPN_CONF_FILE
+echo "NEW_NAME=$NEW_NAME" >> $VPN_CONF_FILE
+echo "NEW_DOMAIN=$NEW_DOMAIN" >> $VPN_CONF_FILE
+echo "NEW_DEV=$NEW_DEV" >> $VPN_CONF_FILE
+echo "NEW_IP=$NEW_IP" >> $VPN_CONF_FILE
+echo "NEW_VPN_PORT=$NEW_VPN_PORT" >> $VPN_CONF_FILE
+echo "NEW_VPN_PROTOCOL=$NEW_VPN_PROTOCOL" >> $VPN_CONF_FILE
+echo "COMPRESSION_ENABLED=$COMPRESSION_ENABLED" >> $VPN_CONF_FILE
+echo "ENCRYPT=$ENCRYPT" >> $VPN_CONF_FILE
+echo "NEW_DNS1=$NEW_DNS1" >> $VPN_CONF_FILE
+echo "NEW_DNS2=$NEW_DNS2" >> $VPN_CONF_FILE
 
 
 
@@ -277,23 +323,20 @@ IP4=$(echo "$NEW_IP" | cut -d "." -f 4 2>&1)
 
 cd "$FILES_LINKAT"/
 
-sed -i s/__NAME__/"$NEW_NAME"/g *
-sed -i s/__DOMAIN__/"$NEW_DOMAIN"/g *
-sed -i s/__DEV__/"$NEW_DEV"/g *
-sed -i s/__IP__/"$NEW_IP"/g *
-sed -i s/__NEW_VPN_PORT__/"$NEW_VPN_PORT"/g *
-sed -i s/__NEW_VPN_PROTOCOL__/"$NEW_VPN_PROTOCOL"/g *
-sed -i s/__DNS1__/"$NEW_DNS1"/g *
-sed -i s/__DNS2__/"$NEW_DNS2"/g *
-sed -i s/__PASSROOT__/"$NEW_PASSROOT1"/g *
-sed -i s/__PASSLNADMIN__/"$NEW_PASSLNADMIN1"/g *
-sed -i s/__IP1__/"$IP1"/g *
-sed -i s/__IP2__/"$IP2"/g *
-sed -i s/__IP3__/"$IP3"/g *
-sed -i s/__IP4__/"$IP4"/g *
-
-## Nou passwd de l'usuari lnadmin i root
-echo "lnadmin:$NEW_PASSLNADMIN1" | chpasswd
+sed -i s/servidor/"$NEW_NAME"/g *
+sed -i s/NEW_DOMAIN/"$NEW_DOMAIN"/g *
+sed -i s/enp0s31f6/"$NEW_DEV"/g *
+sed -i s/192.168.0.240/"$NEW_IP"/g *
+sed -i s/1194/"$NEW_VPN_PORT"/g *
+sed -i s/udp/"$NEW_VPN_PROTOCOL"/g *
+sed -i s/No/"$COMPRESSION_ENABLED"/g *
+sed -i s/Estandar/"$ENCRYPT"/g *
+sed -i s/213.176.161.16/"$NEW_DNS1"/g *
+sed -i s/213.176.161.18/"$NEW_DNS2"/g *
+sed -i s/192/"$IP1"/g *
+sed -i s/168/"$IP2"/g *
+sed -i s/0/"$IP3"/g *
+sed -i s/240/"$IP4"/g *
 
 ## Aplica configuracions
 echo -en "Aplicant configuracions...\n\n"
@@ -308,9 +351,6 @@ netplan apply
 rm /etc/resolv.conf
 ln -s /run/systemd/resolve/resolv.conf /etc/resolv.conf
 
-## Aplica ANSIBLE
-ansible-playbook "$ANSIBLEPLAY"/hostname.yml
-ansible-playbook "$ANSIBLEPLAY"/dns.yml
 
 systemctl restart bind9.service
 
@@ -324,34 +364,6 @@ if [ "$res" -eq 0 ]; then
         sudo apt purge slapd ldap-auth-config auth-client-config -y
 fi
 
-## Aplicant Playbook LDAP
-ansible-playbook "$ANSIBLEPLAY"/ldap.yml
-
-## Aplicant Playbook servidor (webmin, lnadmin, etc)
-ansible-playbook "$ANSIBLEPLAY"/server.yml
-
-## Configurant servidor LDAP
-cd "$FILES_LINKAT"/
-sudo "$FILES_LINKAT"/ldap.sh
-check_errors ldap
-
-sudo "$FILES_LINKAT"/ldap-auth.sh
-check_errors ldap-auth
-
-## Configuració servidor SAMBA
-ansible-playbook "$ANSIBLEPLAY"/smb.yml
-sudo "$FILES_LINKAT"/ldap-samba.sh
-check_errors ldap-samba
-sudo "$FILES_LINKAT"/smbldap-populate.sh
-check_errors populate
-
-## Copy Jclic Projects
-mv /usr/share/java/JClic/projects /srv/exports/S/jclic
-chown -R root:Administradors /srv/exports/S/jclic
-
-## Aplicant Playbook permisos i ACLs unitats
-ansible-playbook "$ANSIBLEPLAY"/permisos.yml
-ansible-playbook "$ANSIBLEPLAY"/acl.yml
 
 # Flag d'instal·lació
 echo servidor > /etc/modalitat_linkat
