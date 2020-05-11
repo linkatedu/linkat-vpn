@@ -120,8 +120,8 @@ VPN_RANDOM_PORT="Aleatori:"$GEN_RANDOM_PORT""
 NEW_VPN_PORT=$(echo "$VPN_DEFAULT_PORT $VPN_CUSTOM_PORT $VPN_RANDOM_PORT")
 PROTOCOL="udp tcp"
 NEW_VPN_PROTOCOL="udp tcp"
-COMPRESSION="No Sí"
-COMP_ALG="lz4-v2 lz4 lzo"
+COMPRESSION="Sí No"
+COMP_ALG="lzo lz4-v2 lz4"
 
 
 ## ENCRYPTION SETTINGS ###################################################
@@ -189,13 +189,13 @@ formulari()
 res=$(yad --width=400 --title="Linkat Servidor Openvpn" --text="\nAquest instal·lador configura el servidor VPN Linkat.\nIntroduïu els valors per configurar el sevidor de centre.\nPots deixar els valors per defecte.\nCal emplenar tots els camps.\n\nConfiguracions del servidor:\n" \
 --image="/usr/share/linkat/linkat-servidor/linkat-servidor-banner.png" \
 --form --item-separator=" " \
---field="m del servidor":RO \
---field="m del domini" \
+--field="Nom del servidor":RO \
+--field="Nom del domini" \
 --field="Targeta de xarxa":CBE \
 --field="IP pública del servidor VPN" \
 --field="Port Servidor VPN":CBE \
 --field="Protocol":CBE \
---field="Habilitar compressió (No recomanat)":CBE \
+--field="Habilitar compressió":CBE \
 --field="Encriptació":CBE \
 --field="DNS Primària" \
 --field="DNS Secundària" \
@@ -277,10 +277,6 @@ fi
 
 fi
 }
-
-
-
-
 
 
 while [ "$ERROR" -eq 1 ]; do
